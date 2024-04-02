@@ -29,6 +29,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.pm01restapi24.Config.Personas;
+import com.example.pm01restapi24.Config.Registros;
 import com.example.pm01restapi24.Config.RestApiMethods;
 
 import org.json.JSONObject;
@@ -38,6 +39,11 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 
 public class ActivityCreate extends AppCompatActivity {
     static final int REQUEST_IMAGE = 101;
@@ -63,6 +69,7 @@ public class ActivityCreate extends AppCompatActivity {
         apellidos =(EditText) findViewById(R.id.apellidos);
         fechanac =(EditText) findViewById(R.id.fecha);
         telefono =(EditText) findViewById(R.id.telefono);
+
         
         btnfoto.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -70,8 +77,26 @@ public class ActivityCreate extends AppCompatActivity {
                 PermisosCamara();
             }
         });
-        
-        
+
+        Button btnRegistros = findViewById(R.id.btnRegistro);
+        btnRegistros.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(ActivityCreate.this, Registros.class);
+                startActivity(intent);
+            }
+        });
+
+
+        btncreate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SendData();
+            }
+        });
+
+
+
         btncreate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -80,63 +105,41 @@ public class ActivityCreate extends AppCompatActivity {
         });
     }
 
-    private void SendData()
-    {
-        requestQueue = Volley.newRequestQueue(this);
-        Personas personas = new Personas();
+    private void SendData() {
+        // Obtener una referencia a la base de datos de Firebase
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference().child("personas");
 
+        // Crear una nueva clave única para la persona
+        String personaId = databaseReference.push().getKey();
+
+        // Crear un objeto de datos de la persona
+        Personas personas = new Personas();
         personas.setNombres(nombres.getText().toString());
         personas.setApellidos(apellidos.getText().toString());
         personas.setFechanac(fechanac.getText().toString());
         personas.setTelefono(telefono.getText().toString());
         personas.setFoto(ConvertImageBase64(currentPhotoPath));
 
-        JSONObject jsonObject = new JSONObject();
-
-        try
-        {
-            jsonObject.put("nombres",personas.getNombres());
-            jsonObject.put("apellidos",personas.getApellidos());
-            jsonObject.put("telefono",personas.getTelefono());
-            jsonObject.put("fechanac",personas.getFechanac());
-            jsonObject.put("foto",personas.getFoto());
-
-            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, RestApiMethods.EndpointPostPerson,
-                    jsonObject, new Response.Listener<JSONObject>() {
-                @Override
-                public void onResponse(JSONObject response)
-                {
-                    try
-                    {
-                        String mensaje = response.getString("message");
-                        Toast.makeText(getApplicationContext(), mensaje, Toast.LENGTH_LONG).show();
+        // Guardar los datos de la persona en la base de datos de Firebase bajo la clave única
+        databaseReference.child(personaId).setValue(personas)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        // Datos guardados exitosamente
+                        Toast.makeText(getApplicationContext(), "Datos guardados correctamente", Toast.LENGTH_SHORT).show();
                     }
-                    catch (Exception ex)
-                    {
-                        ex.printStackTrace();
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Error al guardar los datos
+                        Toast.makeText(getApplicationContext(), "Error al guardar los datos: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
+                });
 
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-
-                    Toast.makeText(getApplicationContext(), error.getMessage().toString(),
-                            Toast.LENGTH_LONG).show();
-
-                }
-            });
-
-
-            requestQueue.add(request);
-
-        }
-        catch (Exception ex)
-        {
-           ex.printStackTrace();
-        }
 
     }
+
 
     private String ConvertImageBase64(String path)
     {

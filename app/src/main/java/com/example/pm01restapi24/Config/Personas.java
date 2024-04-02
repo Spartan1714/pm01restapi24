@@ -21,6 +21,13 @@ public class Personas
         this.fechanac = fechanac;
         this.foto = foto;
     }
+    public Personas(String nombres, String telefono, String fechanac) {
+        this.id = id;
+        this.nombres = nombres;
+        this.telefono = telefono;
+        this.fechanac = fechanac;
+
+    }
 
     public String getId() {
         return id;
